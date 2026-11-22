@@ -1,0 +1,10 @@
+{
+  "name": "locket-sgmodule",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom Locket frames & image compositor on Vercel",
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}

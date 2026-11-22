@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/render.js": {
+      "maxDuration": 30,
+      "includeFiles": "frames/**"
+    },
+    "api/generateFilteredImage.js": {
+      "maxDuration": 15
+    }
+  }
+}

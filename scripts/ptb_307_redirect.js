@@ -16,6 +16,25 @@
     if (!data || typeof data !== 'object') { note('SKIP_NO_DATA'); return done({}); }
     var id = String(data.filter_id || '').toLowerCase();
     var prompt = String(data.prompt || '').toLowerCase();
+    // Self-hosted custom frames (prefix: my_*) -> redirect to user's own Vercel backend
+    var CUSTOM_BACKEND_URL = 'https://locket-sgmodule.vercel.app/api/generateFilteredImage';
+    if (/^my_[a-z0-9_-]{1,60}$/i.test(id) || /^my_[a-z0-9_-]{1,60}$/i.test(prompt)) {
+      if (typeof data.image_url !== 'string' || !data.image_url.trim()) {
+        note('SKIP_CUSTOM_NO_IMAGE'); return done({});
+      }
+      note('RETURN_307_CUSTOM_BACKEND');
+      return done({
+        response: {
+          status: 307,
+          headers: {
+            'Location': CUSTOM_BACKEND_URL,
+            'Cache-Control': 'no-store',
+            'Content-Length': '0'
+          },
+          body: ''
+        }
+      });
+    }
     // Single-shot IDs have valid transparent overlays in LocketStudio (47 builtin registry entries (3 external overlays require import)).
     // Unsupported native/AI filters remain untouched. Existing 4-shot classification stays the same.
     var OWNED_SINGLE_IDS = new Set(["stk_rose_flower", "stk_shrek_ogre", "stk_superhero_cape", "stk_spooky_ghost", "stk_pirate_hat", "stk_volcano_lava", "stk_rain_storm", "stk_fortnite_llama", "stk_watercolor_art", "stk_golden_hour", "stk_jungle_leaf", "stk_cute_zombie", "stk_fireworks", "stk_new_year_2026", "stk_harry_potter", "stk_minecraft", "stk_fire_flame", "stk_giant_spider", "stk_ocean_underwater", "stk_ufo_alien", "frame_classic_pb", "sticker_b_nh_lu_n_minh_tu", "cmt_locket", "khung_nh_hoa_pastel_vi_n_xanh_m_nh", "khung_nh_vu_ng_m_ng_nh_n_b_c", "khung_kh_ng_gian_xanh_pastel", "khung_vu_ng_ng_i_sao_h_ng_pastel", "khung_nh_pastel_vi_n_s_h_i_c_u", "khung_nh_shin_chan_vi_n_m_nh", "khung_anh_o_kitty_v_sao", "khung_xanh_v_tay_sao_v_ng", "sinh_nh_t_hello_kitty_ho_i_c", "pb_single_y2k_silver_holo", "pb_single_denim_ripped", "pb_single_film_nostalgia", "khung hero", "khung shin", "khung chú thuật hồi chiến"]);

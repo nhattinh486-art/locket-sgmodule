@@ -1,0 +1,25 @@
+{
+  "groups": [
+    {
+      "id": "group_my_frames",
+      "name": "Khung Của Tôi ✨",
+      "enabled": true
+    }
+  ],
+  "frames": [
+    {
+      "id": "my_demo_frame",
+      "name": "Khung Demo ✨",
+      "groupId": "group_my_frames",
+      "frameUrl": "https://raw.githubusercontent.com/nhattinh486-art/locket-sgmodule/main/frames/my_demo_frame.png",
+      "enabled": true,
+      "caption": {
+        "text": "My Locket ✨",
+        "mode": "gradient",
+        "from": "#ff6b6b",
+        "to": "#ffd93d",
+        "angle": 120
+      }
+    }
+  ]
+}

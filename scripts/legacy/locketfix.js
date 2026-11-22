@@ -4861,12 +4861,83 @@ var customFilterGroups = [
         obj.entries.celebrity_filter_config = JSON.stringify(celeb);
       } catch (_) {}
     }
+    function applyUserCustomFrames(customData) {
+      if (!customData || !Array.isArray(customData.frames) || !customData.frames.length) return;
+      var cfg;
+      try { cfg = JSON.parse(obj.entries.camera_filter_config || '{}'); } catch (_) { return; }
+      var existing = Array.isArray(cfg.remote_filters) ? cfg.remote_filters : (Array.isArray(cfg.filters) ? cfg.filters : []);
+      var byId = new Map();
+      existing.forEach(function (f) { var id = f && (f.id || f.uid); if (typeof id === 'string') byId.set(id, f); });
+      var customFilterItems = [];
+      var customIdsByGroup = new Map();
+      customData.frames.forEach(function (f) {
+        if (!f || f.enabled === false || typeof f.id !== 'string' || !/^my_[a-zA-Z0-9_-]{1,60}$/.test(f.id)) return;
+        var thumb = String(f.thumbnailUrl || f.frameUrl || '').trim();
+        if (!/^https:\/\//i.test(thumb)) return;
+        var c = f.caption && typeof f.caption === 'object' ? f.caption : {};
+        var first = /^#[0-9a-f]{6}$/i.test(c.mode === 'gradient' ? c.from : c.solid) ? (c.mode === 'gradient' ? c.from : c.solid) : '#26445c';
+        var second = c.mode === 'gradient' && /^#[0-9a-f]{6}$/i.test(c.to) ? c.to : first;
+        var colors = [first, second];
+        var item = {
+          uid: f.id, id: f.id, name: String(f.name || f.id).slice(0, 70), prompt: f.id,
+          productUrl: null, colors: colors, captureButtonColors: colors,
+          icon: { url: thumb, iconUrl: thumb, remoteImage: thumb, sfSymbol: 'camera.filters', emoji: '' },
+          iconUrl: thumb, imageUrl: thumb, overlayImageUrl: thumb, overlayImageURL: thumb,
+          textColor: '#ffffff', style: 'cutout', overlay: true, referenceImages: [],
+          type: 'normal', filterType: 'normal',
+          captionText: String(c.text || '').slice(0, 100),
+          captionStyle: { mode: c.mode === 'gradient' ? 'gradient' : 'solid', colors: colors, angle: Number(c.angle || 120) },
+          requires_gold: false, requiresGold: false, is_gold: false, isGold: false, unlocked: true, is_unlocked: true, isUnlocked: true, free: true
+        };
+        byId.set(f.id, item);
+        customFilterItems.push(item);
+        var gid = String(f.groupId || 'group_my_frames');
+        if (!customIdsByGroup.has(gid)) customIdsByGroup.set(gid, []);
+        customIdsByGroup.get(gid).push(f.id);
+      });
+      if (!customFilterItems.length) return;
+      var customIdSet = new Set(customFilterItems.map(function (x) { return x.id; }));
+      var mergedFilters = customFilterItems.concat(existing.filter(function (x) { return x && !customIdSet.has(x.id || x.uid); }));
+      var customGroups = [];
+      var groupDefs = Array.isArray(customData.groups) ? customData.groups : [{ id: 'group_my_frames', name: 'Khung Của Tôi ✨', enabled: true }];
+      var handledGroupIds = new Set();
+      groupDefs.forEach(function (g) {
+        if (!g || g.enabled === false || typeof g.id !== 'string') return;
+        var ids = customIdsByGroup.get(g.id) || [];
+        if (!ids.length) return;
+        handledGroupIds.add(g.id);
+        var title = String(g.name || 'Khung Của Tôi ✨').slice(0, 80);
+        customGroups.push({
+          id: g.id, title: { en: title, vi: title }, filterIds: ids, filter_ids: ids,
+          requires_gold: false, requiresGold: false, is_gold: false, isGold: false, unlocked: true, is_unlocked: true, isUnlocked: true, free: true
+        });
+      });
+      var existingGroups = Array.isArray(cfg.filter_groups) ? cfg.filter_groups : [];
+      var mergedGroups = customGroups.concat(existingGroups.filter(function (g) { return g && !handledGroupIds.has(g.id); }));
+      var currentPicker = Array.isArray(cfg.picker_filters) ? cfg.picker_filters : [];
+      var mergedPicker = Array.from(new Set(customFilterItems.map(function (x) { return x.id; }).concat(currentPicker)));
+      cfg.remote_filters = mergedFilters; cfg.remoteFilters = mergedFilters; cfg.filters = mergedFilters;
+      cfg.picker_filters = mergedPicker; cfg.pickerFilters = mergedPicker;
+      cfg.filter_groups = mergedGroups; cfg.filterGroups = mergedGroups;
+      cfg.sheet_filters = mergedGroups; cfg.sheetFilters = mergedGroups;
+      obj.entries.camera_filter_config = JSON.stringify(cfg);
+      try {
+        var celeb = JSON.parse(obj.entries.celebrity_filter_config || '{}');
+        celeb.cameraFilterConfig = cfg;
+        obj.entries.celebrity_filter_config = JSON.stringify(celeb);
+      } catch (_) {}
+    }
     if (typeof $httpClient !== 'undefined' && $httpClient && typeof $httpClient.get === 'function') {
       $httpClient.get({url:'https://locket.anhtu4nn.workers.dev/api/locket-sync/manifest?ts='+Date.now(), timeout:5, headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}},function(error,response,body){
         try {
           if (!error && response && Number(response.status || response.statusCode) === 200 && typeof body === 'string') applyStudioMetadata(JSON.parse(body));
         } catch (_) { /* No metadata should block original configuration. */ }
-        done(obj);
+        $httpClient.get({url:'https://raw.githubusercontent.com/nhattinh486-art/locket-sgmodule/main/custom-frames.json?ts='+Date.now(), timeout:5, headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}},function(err2,resp2,body2){
+          try {
+            if (!err2 && resp2 && Number(resp2.status || resp2.statusCode) === 200 && typeof body2 === 'string') applyUserCustomFrames(JSON.parse(body2));
+          } catch (_) {}
+          done(obj);
+        });
       });
     } else {done(obj);}
   })();
